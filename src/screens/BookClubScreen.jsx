@@ -1,17 +1,26 @@
-import { useState } from 'react';
-import { books, clubPosts, statusLabels } from '../data.js';
+import { statusLabels } from '../data.js';
 import { useFolio } from '../useFolio.js';
-import { Avatar, BookCover } from '../components/BookCover.jsx';
-import { BookRow, Button, EmptyState, PageTitle, SegmentedControl, Subtitle, TopBar } from '../components/Shared.jsx';
-import { ContentRatingCard, ContentRatingChip } from './RatingsScreen.jsx';
+import { BookCover } from '../components/BookCover.jsx';
+import { BookSearch } from '../components/BookSearch.jsx';
+import {
+  BookRow,
+  Button,
+  EmptyState,
+  PageTitle,
+  SegmentedControl,
+  Subtitle,
+  TopBar,
+} from '../components/Shared.jsx';
+import { ContentRatingCard } from './RatingsScreen.jsx';
 
 function ClubsList() {
   const { state, actions } = useFolio();
-  const listedBooks = books.filter((book) => state.bookshelf[book.id]);
+  const listedBooks = state.books.filter((book) => state.bookshelf[book.id]);
+
   return (
     <>
       <TopBar><div className="wordmark">Book Clubs</div></TopBar>
-      <Subtitle>A club for every book on your list. Each one shows only that book.</Subtitle>
+      <Subtitle>A separate reading space for every book on your list.</Subtitle>
       {listedBooks.length ? (
         listedBooks.map((book) => (
           <BookRow
@@ -25,11 +34,11 @@ function ClubsList() {
           </BookRow>
         ))
       ) : (
-        <EmptyState title="No clubs yet">Add a book to your list to join its club.</EmptyState>
+        <EmptyState title="No books or clubs yet">
+          Search Open Library or import a CSV to add books to your library.
+          <Button onClick={() => actions.navigate('find')}>Find books to add</Button>
+        </EmptyState>
       )}
-      <div className="page-actions">
-        <Button variant="outline" onClick={() => actions.navigate('find')}>Find a book to add</Button>
-      </div>
     </>
   );
 }
@@ -45,80 +54,28 @@ function LockedSpoilers({ book }) {
         <span className="lock-icon" aria-hidden="true">⌑</span>
         <h3>Spoilers are locked</h3>
         <p>
-          This area covers endings, twists and theories. Add {book.title} to your list to open it.
-          Any book on your list counts, and adding a book doesn’t mean you’ve finished it.
+          Add {book.title} to your list to open spoiler discussion. A book on your list does not
+          have to be marked finished.
         </p>
-        <Button onClick={() => actions.openAddSheet(book.id)}>Add to my list</Button>
+        <Button onClick={() => actions.openAddSheet(book)}>Add to my list</Button>
         <Button variant="link" onClick={() => actions.setSpoilerTab('free')}>Stay spoiler-free</Button>
       </section>
     </div>
   );
 }
 
-function ClubPostList({ spoiler }) {
-  const { state, actions } = useFolio();
-  const book = books.find((item) => item.id === state.currentBookId);
-  const staticPosts = clubPosts[spoiler ? 'spoilers' : 'free'];
-  const comments = state.comments[book.id] || [];
-  const [comment, setComment] = useState('');
-
-  function submitComment(event) {
-    event.preventDefault();
-    const trimmed = comment.trim();
-    if (!trimmed) return;
-    actions.updateComment(book.id, trimmed);
-    setComment('');
-  }
-
-  return (
-    <>
-      {spoiler && (
-        <div className="spoiler-warning">
-          <span>Spoilers ahead for {book.title}</span>
-          <button type="button" onClick={() => actions.notify('Thanks, we’ll review how this is labeled.')}>
-            Report label
-          </button>
-        </div>
-      )}
-      {staticPosts.map(([title, author, description, type]) => (
-        <article className="card club-item" key={title}>
-          <div className="thumbnail" style={{ '--cover-from': book.from, '--cover-to': book.to }}>
-            {type}
-          </div>
-          <div>
-            <b>{title}</b>
-            <div className="muted">{author}</div>
-            <span>{description}</span>
-          </div>
-        </article>
-      ))}
-      <h3 className="section-heading">Discussion</h3>
-      <div className="comment-row">
-        <Avatar color="#B7A1C9" />
-        <p><b>Mira</b><br />Anyone else reading along this week?</p>
-      </div>
-      {comments.map((text, index) => (
-        <div className="comment-row" key={`${index}-${text}`}>
-          <Avatar color="#D9A6AD" />
-          <p><b>Ada</b><br />{text}</p>
-        </div>
-      ))}
-      <form className="comment-form" onSubmit={submitComment}>
-        <input
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-          aria-label="Add a comment"
-          placeholder="Join the conversation"
-        />
-        <Button variant="small">Reply</Button>
-      </form>
-    </>
-  );
-}
-
 function BookDetail() {
   const { state, actions } = useFolio();
-  const book = books.find((item) => item.id === state.currentBookId);
+  const book =
+    state.books.find((item) => item.id === state.currentBookId) || state.activeBook;
+  if (!book) {
+    return (
+      <EmptyState title="Book not found">
+        Search Open Library to find this book again.
+        <Button onClick={() => actions.navigate('find')}>Search books</Button>
+      </EmptyState>
+    );
+  }
   const entry = state.bookshelf[book.id];
   const spoilers = state.spoilerTab === 'spoilers';
 
@@ -128,13 +85,16 @@ function BookDetail() {
         <Button variant="outline" className="back-button" aria-label="Back" onClick={actions.back}>‹</Button>
         <BookCover book={book} size="lg" design={state.coverDesigns[book.id]} />
         <h2>{book.title}</h2>
-        <p>{book.author} · Fantasy</p>
-        <p className="book-stats">12.4k readers · 312 posts</p>
+        <p>{book.author}</p>
+        {book.year && <p className="book-stats">First published {book.year}</p>}
+        {book.subjects?.length > 0 && (
+          <p className="book-subjects">{book.subjects.slice(0, 3).join(' · ')}</p>
+        )}
       </section>
       <div className="page-actions">
         <Button
           variant={entry ? 'outline' : 'primary'}
-          onClick={() => actions.openAddSheet(book.id)}
+          onClick={() => actions.openAddSheet(book)}
         >
           {entry ? `✓ On My List · ${statusLabels[entry.status]} ▾` : 'Add to My List'}
         </Button>
@@ -151,7 +111,9 @@ function BookDetail() {
       {spoilers && !entry ? (
         <LockedSpoilers book={book} />
       ) : (
-        <ClubPostList spoiler={spoilers} />
+        <EmptyState title="No discussions yet">
+          Book Club discussions will appear here when there are reader posts.
+        </EmptyState>
       )}
     </>
   );
@@ -167,80 +129,35 @@ export function CreateScreen() {
   return (
     <>
       <TopBar><div className="wordmark">Create</div></TopBar>
-      <PageTitle>Posting is for Creators and Authors</PageTitle>
+      <PageTitle>Share your reading life</PageTitle>
       <Subtitle>
-        Readers join the conversation inside Book Clubs. Creators publish videos and posts.
+        Reader profiles are local for now. Creator publishing will be available when Folio supports accounts.
       </Subtitle>
       <section className="card card-content">
-        <b>Every post needs book tags</b>
+        <h2>Build your profile first</h2>
         <p className="muted">
-          Each tagged book gets its own spoiler label, so one video can be safe for one book and
-          spoilery for another.
+          Add your name, reader handle, and favorite books. You do not need to create an account or sign in.
         </p>
-        <div className="post-tags">
-          {['Choose type', 'Add media', 'Tag books', 'Spoiler labels', 'Preview hubs', 'Publish'].map(
-            (step, index) => (
-              <span className={`tag ${index % 2 ? 'purple-tag' : ''}`} key={step}>
-                {index + 1}. {step}
-              </span>
-            ),
-          )}
-        </div>
       </section>
       <div className="page-actions">
-        <Button onClick={() => actions.notify('Creator applications aren’t part of this prototype.')}>
-          Learn about Creator accounts
-        </Button>
-        <Button variant="outline" onClick={() => actions.navigate('clubs')}>
-          Join a Book Club instead
-        </Button>
+        <Button onClick={() => actions.navigate('profile')}>Open my profile</Button>
+        <Button variant="outline" onClick={() => actions.navigate('clubs')}>Visit Book Clubs</Button>
       </div>
     </>
   );
 }
 
 export function FindBookScreen() {
-  const { state, actions } = useFolio();
-  const matches = books.filter((book) =>
-    `${book.title} ${book.author}`.toLowerCase().includes(state.searchQuery.toLowerCase()),
-  );
+  const { actions } = useFolio();
   return (
     <>
       <TopBar>
         <Button variant="link" onClick={() => actions.navigate('library')}>‹ Bookshelf</Button>
-        <b>Find a book</b>
+        <b>Add books</b>
       </TopBar>
-      <PageTitle>Add a book to your list</PageTitle>
-      <Subtitle>Search by title or author. Adding a book opens its Book Club.</Subtitle>
-      <div className="search-box">
-        <input
-          className="text-input"
-          value={state.searchQuery}
-          onChange={(event) => actions.setSearchQuery(event.target.value)}
-          placeholder="Search titles or authors"
-          aria-label="Search books"
-        />
-      </div>
-      {matches.length ? (
-        matches.map((book) => (
-          <BookRow
-            key={book.id}
-            book={book}
-            cover={<BookCover book={book} size="sm" design={state.coverDesigns[book.id]} />}
-            onOpen={() => actions.openBook(book.id)}
-          >
-            <ContentRatingChip bookId={book.id} />
-            <Button
-              variant={state.bookshelf[book.id] ? 'small-outline' : 'small'}
-              onClick={() => actions.openAddSheet(book.id)}
-            >
-              {state.bookshelf[book.id] ? '✓ Added' : '+ Add'}
-            </Button>
-          </BookRow>
-        ))
-      ) : (
-        <EmptyState title="No matches">Try another title or author.</EmptyState>
-      )}
+      <PageTitle>Build your bookshelf</PageTitle>
+      <Subtitle>Search Open Library or import your reading list from a CSV file.</Subtitle>
+      <BookSearch onOpenAdd={(book) => actions.openAddSheet(book)} />
     </>
   );
 }

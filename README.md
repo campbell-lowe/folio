@@ -1,16 +1,41 @@
-# React + Vite
+# Folio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Folio is a React reading-list prototype built with Vite. It uses Open Library for book search and cover images. There are no account creation or sign-in screens: profile, bookshelf, and cover preferences are stored in the current browser.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```sh
+npm install
+npm run dev
+```
 
-## React Compiler
+Run the production checks with:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```sh
+npm run lint
+npm run build
+```
 
-## Expanding the ESLint configuration
+## Add books
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Search by title or author in **Bookshelf → Find books to add**. Search results come from the Open Library Search API. Books can be added to the local bookshelf, with their Open Library work key used as the stable ID.
+
+To import a reading list, choose a CSV file on the **Add books** screen. Goodreads exports work directly: Folio recognizes the Goodreads `Title`, `Author`, `ISBN`/`ISBN13`, and `Exclusive Shelf` columns. It uses ISBNs when available, matches the title and author against Open Library, and carries over read/currently-reading/to-read status.
+
+Other CSV files can use a `title` header and optionally an `author` header, for example:
+
+```csv
+title,author
+"A book title",An author
+"Another title","Another author"
+```
+
+Folio looks up each row in Open Library and lets you select the matching edition/work before adding the matched books. Imports are limited to 500 rows at a time. Rows without a match are not added. Only ISBNs or title/author search terms are sent to Open Library; Goodreads reviews, private notes, and other CSV fields are not uploaded.
+
+## Home feed and shelves
+
+The home feed combines books in your local library with live Open Library titles; it does not invent posts or other readers. The bookshelf can list all books and filter by shelf status or reading status. Preview Pro in the bookshelf to create and rename shelves, search/filter your books by author, and add all filtered books to a shelf.
+
+## Local data
+
+The reader profile, books, bookshelf status, saved discoveries, cover preferences, and named shelves are stored in browser `localStorage` under `folio.guest.v1`. They are not synchronized to a server or another device. Reader ratings are collected in the current app session only.

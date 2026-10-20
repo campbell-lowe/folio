@@ -47,7 +47,11 @@ export function EmptyState({ title, children }) {
   return (
     <div className="empty-state">
       <h2>{title}</h2>
-      {children && <p>{children}</p>}
+      {children && (
+        <div className="empty-state-content">
+          {typeof children === 'string' ? <p>{children}</p> : children}
+        </div>
+      )}
     </div>
   );
 }

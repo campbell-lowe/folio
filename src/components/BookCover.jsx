@@ -53,11 +53,12 @@ export function BookCover({ book, size = 'md', design, className = '' }) {
       </svg>
       <b>{book.title}</b>
       <small>{book.author}</small>
-      {book.isbn && !customized && (
+      {book.coverUrl && !customized && (
         <img
-          src={`https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg?default=false`}
+          src={book.coverUrl.replace(/-[SML]\.jpg/, `-${size === 'xs' ? 'S' : size === 'sm' ? 'M' : 'L'}.jpg`)}
           alt=""
           loading="lazy"
+          decoding="async"
           onError={(event) => event.currentTarget.remove()}
         />
       )}
@@ -67,4 +68,12 @@ export function BookCover({ book, size = 'md', design, className = '' }) {
 
 export function Avatar({ color = '#B7A1C9', className = '' }) {
   return <span className={`avatar ${className}`} style={{ background: color }} aria-hidden="true" />;
+}
+
+export function AvatarButton({ color, onClick }) {
+  return (
+    <button type="button" className="profile-link" aria-label="Open profile" onClick={onClick}>
+      <Avatar color={color} />
+    </button>
+  );
 }

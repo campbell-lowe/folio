@@ -1,13 +1,23 @@
 import { useEffect } from 'react';
-import { books } from '../data.js';
 import { useFolio } from '../useFolio.js';
 import { BookCover } from './BookCover.jsx';
 import { Button } from './Shared.jsx';
 
 export function AddBookSheet() {
   const { state, actions } = useFolio();
-  const book = books.find((item) => item.id === state.addingBookId);
-  if (!book) return null;
+  const { closeAddSheet } = actions;
+  const book = state.books.find((item) => item.id === state.addingBookId);
+
+  useEffect(() => {
+    if (!state.addingBookId) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') closeAddSheet();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [closeAddSheet, state.addingBookId]);
+
+  if (!state.addingBookId || !book) return null;
   const current = state.bookshelf[book.id];
   const statuses = [
     ['want', 'Want to Read'],
@@ -21,7 +31,7 @@ export function AddBookSheet() {
       className="overlay"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) actions.closeAddSheet();
+        if (event.target === event.currentTarget) closeAddSheet();
       }}
     >
       <section className="action-sheet" role="dialog" aria-modal="true" aria-label="Book status">
@@ -47,9 +57,19 @@ export function AddBookSheet() {
             Remove from my list
           </Button>
         )}
-        <Button variant="link" onClick={actions.closeAddSheet}>
-          Cancel
-        </Button>
+        <div className="action-sheet-dismiss">
+          <Button variant="link" onClick={closeAddSheet}>
+            Cancel
+          </Button>
+          <button
+            className="action-sheet-close"
+            type="button"
+            aria-label="Close book status menu"
+            onClick={closeAddSheet}
+          >
+            ×
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -67,7 +87,7 @@ export function DiscoverySheet() {
         <p className="muted">
           Interest doesn’t mean you’re ready to add it to your list.
         </p>
-        <Button onClick={() => actions.openAddSheet(book.id, true)}>Add to My List</Button>
+        <Button onClick={() => actions.openAddSheet(book, true)}>Add to My List</Button>
         <Button
           variant="outline"
           onClick={() => actions.finishDiscoveryBook(book.id, true)}

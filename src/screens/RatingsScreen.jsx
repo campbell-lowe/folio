@@ -1,8 +1,4 @@
-import {
-  contentWarnings,
-  books,
-  surveySections,
-} from '../data.js';
+import { surveySections } from '../data.js';
 import { useFolio } from '../useFolio.js';
 import { getContentRatings, compileSurvey, sectionAnswers } from '../ratingData.js';
 import { BookCover } from '../components/BookCover.jsx';
@@ -93,7 +89,7 @@ function RatingScaleCard({ title, emoji, value, count, histogram, descriptions }
   );
 }
 
-export function ContentRatingChip({ bookId }) {
+export function ContentRatingChip({ bookId, book }) {
   const { actions } = useFolio();
   const ratings = getContentRatings(bookId);
   const rated = ratings.spiceCount || ratings.cleanCount;
@@ -106,7 +102,7 @@ export function ContentRatingChip({ bookId }) {
       type="button"
       className="rating-chip"
       aria-label={label}
-      onClick={() => actions.openRatings(bookId)}
+      onClick={() => actions.openRatings(book || bookId)}
     >
       {rated ? (
         <>
@@ -160,7 +156,16 @@ export function ContentRatingCard({ bookId }) {
 
 export function ContentRatingsScreen() {
   const { state, actions } = useFolio();
-  const book = books.find((item) => item.id === state.currentBookId);
+  const book = state.books.find((item) => item.id === state.currentBookId)
+    || state.activeBook;
+  if (!book) {
+    return (
+      <div className="empty-state">
+        <h2>Book not found</h2>
+        <Button onClick={() => actions.navigate('find')}>Search Open Library</Button>
+      </div>
+    );
+  }
   const ratings = getContentRatings(book.id);
   const hasRatings = ratings.spiceCount || ratings.cleanCount;
 
@@ -178,7 +183,7 @@ export function ContentRatingsScreen() {
         </div>
       </div>
       <p className="muted page-note">
-        Community-reported with mock prototype data. This is not an official or definitive rating.
+        Reader-submitted in this session. This is not an official or definitive rating.
       </p>
       {!hasRatings && (
         <div className="empty-state compact-empty">
@@ -216,22 +221,9 @@ export function ContentRatingsScreen() {
           </div>
         ))}
         <h3 className="warning-title">Content warnings</h3>
-        {contentWarnings[book.id] ? (
-          state.bookshelf[book.id] ? (
-            <div className="warning-tags">
-              {contentWarnings[book.id].map((warning) => (
-                <span className="tag" key={warning}>{warning}</span>
-              ))}
-            </div>
-          ) : (
-            <>
-              <p className="muted">
-                Specific warnings can reveal plot details, so they unlock when this book is on your bookshelf.
-              </p>
-              <Button variant="small" onClick={() => actions.openAddSheet(book.id)}>Add to my list</Button>
-            </>
-          )
-        ) : <p className="muted">None reported yet.</p>}
+        <p className="muted">
+          No content warnings have been reported yet. Add your survey to contribute reader data.
+        </p>
       </section>
       <div className="page-actions">
         <Button onClick={() => actions.beginSurvey(book.id)}>Add your survey</Button>
@@ -249,7 +241,8 @@ export function ContentRatingsScreen() {
 export function SurveyScreen() {
   const { state, actions } = useFolio();
   const section = surveySections[state.surveyStep];
-  const book = books.find((item) => item.id === state.surveyBookId);
+  const book = state.books.find((item) => item.id === state.surveyBookId)
+    || state.activeBook;
 
   function continueSurvey(skip = false) {
     if (!skip && !sectionAnswers(section, state.surveyAnswers)) {
@@ -314,7 +307,7 @@ export function SurveyScreen() {
           {state.surveyStep === surveySections.length - 1 ? 'Submit survey' : 'Next'}
         </Button>
         <Button variant="link" onClick={() => continueSurvey(true)}>Skip this section</Button>
-        <span className="muted">Survey for {book.title}</span>
+        <span className="muted">Survey for {book?.title || 'this book'}</span>
       </div>
     </>
   );

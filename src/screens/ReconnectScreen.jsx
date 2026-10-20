@@ -1,17 +1,16 @@
-import { books } from '../data.js';
 import { useFolio } from '../useFolio.js';
 import { BookCover } from '../components/BookCover.jsx';
 import { Button, EmptyState, PageTitle, SegmentedControl, Subtitle, TopBar } from '../components/Shared.jsx';
 
 export default function ReconnectScreen({ feed = false, content = false }) {
   const { state, actions } = useFolio();
-  const currentBook = books.find((book) => book.id === state.readingBookId);
-  const eligibleBooks = books.filter((book) =>
+  const currentBook = state.books.find((book) => book.id === state.readingBookId);
+  const eligibleBooks = state.books.filter((book) =>
     ['reading', 'paused'].includes(state.bookshelf[book.id]?.status),
   );
 
   if (feed) {
-    const finishedBooks = books.filter((book) => state.bookshelf[book.id]?.status === 'finished');
+    const finishedBooks = state.books.filter((book) => state.bookshelf[book.id]?.status === 'finished');
     return (
       <>
         <TopBar>
@@ -56,19 +55,9 @@ export default function ReconnectScreen({ feed = false, content = false }) {
           </div>
         </section>
         <div className="card card-content">
-          <span className="muted">Why you wanted this book</span>
-          <p className="book-quote">“The storms, the slow-burn friendship, the sense of a huge world.”</p>
+          <span className="muted">Your reading session</span>
+          <p>Take your time. This is a private, local reading reminder.</p>
         </div>
-        {[
-          ['@lunareads', 'The first big storm scene hit me again, in a good way.'],
-          ['@pagesandplum', 'Chapter by chapter, the characters get so much richer.'],
-          ['@inkedmargins', 'The worldbuilding pays off for patient readers.'],
-        ].map(([name, text]) => (
-          <article className="card club-item" key={name}>
-            <div className="thumbnail" style={{ '--cover-from': currentBook.from, '--cover-to': currentBook.to }}>Safe</div>
-            <div><b>{name}</b><p>{text}</p></div>
-          </article>
-        ))}
         <h3 className="section-heading">A small goal for tonight</h3>
         <SegmentedControl
           options={['Ten pages', 'One chapter', 'Five minutes'].map((value) => ({ value, label: value }))}

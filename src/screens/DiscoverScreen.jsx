@@ -1,4 +1,3 @@
-import { books } from '../data.js';
 import { useFolio } from '../useFolio.js';
 import { BookCover } from '../components/BookCover.jsx';
 import {
@@ -32,10 +31,11 @@ function DiscoverSetup() {
         </p>
       </div>
       <div className="page-actions">
-        <Button onClick={actions.startDiscovery}>
+        <Button onClick={actions.startDiscovery} disabled={state.discoveryLoading}>
           Find {state.discoverGoal} new {state.discoverGoal === 1 ? 'book' : 'books'}
         </Button>
       </div>
+      {state.discoveryLoading && <p className="subtitle" role="status">Searching Open Library…</p>}
     </>
   );
 }
@@ -75,8 +75,8 @@ function DiscoverySession() {
         <div className="card-content">
           <h2>{book.title}</h2>
           <span className="muted">{book.author}</span>
-          <p>{book.hook}</p>
-          <ContentRatingChip bookId={book.id} />
+          {book.year && <p>First published {book.year}</p>}
+          <ContentRatingChip bookId={book.id} book={book} />
         </div>
       </article>
       <div className="page-actions">
@@ -106,7 +106,9 @@ function DiscoveryResults() {
       </PageTitle>
       <Subtitle>That’s everything for this session. Enjoy the reading.</Subtitle>
       {state.discoveredIds.map((id) => {
-        const book = books.find((item) => item.id === id);
+        const book = state.books.find((item) => item.id === id)
+          || state.discoveryBooks.find((item) => item.id === id);
+        if (!book) return null;
         return (
           <BookRow
             key={id}
@@ -114,7 +116,9 @@ function DiscoveryResults() {
             cover={<BookCover book={book} size="sm" design={state.coverDesigns[id]} />}
             onOpen={() => actions.openBook(id)}
           >
-            <span className="muted">{state.bookshelf[id] ? 'On your list' : 'Saved for later'}</span>
+            <span className="muted">
+              {state.bookshelf[id] ? 'On your list' : state.savedIds.includes(id) ? 'Saved for later' : 'Viewed'}
+            </span>
           </BookRow>
         );
       })}
@@ -130,9 +134,37 @@ function DiscoveryResults() {
 }
 
 export function DiscoverScreen() {
-  const { state } = useFolio();
+  const { state, actions } = useFolio();
   if (!state.discoveryStarted) return <DiscoverSetup />;
+  if (state.discoveryLoading) {
+    return (
+      <>
+        <TopBar><div className="wordmark">Discover</div></TopBar>
+        <p className="subtitle" role="status">Finding books from Open Library…</p>
+      </>
+    );
+  }
+  if (state.discoveryError) {
+    return (
+      <>
+        <TopBar><div className="wordmark">Discover</div></TopBar>
+        <p className="form-error page-note" role="alert">{state.discoveryError}</p>
+        <div className="page-actions"><Button onClick={actions.startDiscovery}>Try again</Button></div>
+      </>
+    );
+  }
   if (state.discoveredIds.length >= state.discoverGoal || !state.currentDiscoveryBook) {
+    if (!state.currentDiscoveryBook && state.discoveredIds.length === 0) {
+      return (
+        <>
+          <TopBar><div className="wordmark">Discover</div></TopBar>
+          <EmptyState title="No Open Library results">
+            Try another time or search Open Library directly.
+          </EmptyState>
+          <div className="page-actions"><Button onClick={actions.startDiscovery}>Try again</Button></div>
+        </>
+      );
+    }
     return <DiscoveryResults />;
   }
   return <DiscoverySession />;

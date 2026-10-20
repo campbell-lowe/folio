@@ -10,6 +10,7 @@ import {
   FindBookScreen,
   HomeScreen,
   LibraryScreen,
+  ProfileScreen,
   ReconnectScreen,
   SurveyScreen,
 } from './screens';
@@ -27,6 +28,7 @@ function FolioApp() {
         {screen === 'create' && <CreateScreen />}
         {screen === 'clubs' && <BookClubScreen />}
         {screen === 'library' && <LibraryScreen />}
+        {screen === 'profile' && <ProfileScreen />}
         {screen === 'find' && <FindBookScreen />}
         {screen === 'book' && <BookClubScreen />}
         {screen === 'ratings' && <ContentRatingsScreen />}

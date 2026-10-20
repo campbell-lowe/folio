@@ -4,3 +4,4 @@ export { LibraryScreen } from './LibraryScreen.jsx';
 export { BookClubScreen, CreateScreen, FindBookScreen } from './BookClubScreen.jsx';
 export { ContentRatingsScreen, SurveyScreen } from './RatingsScreen.jsx';
 export { default as ReconnectScreen } from './ReconnectScreen.jsx';
+export { default as ProfileScreen } from './ProfileScreen.jsx';

@@ -1,42 +1,6 @@
 import { surveySections } from './data.js';
 
-const seededRandom = (initialSeed) => {
-  let seed = initialSeed;
-  return () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647;
-  };
-};
-
-const clampScore = (value) => Math.max(0, Math.min(4, Math.round(value)));
-
-const createSurveySamples = (count, base, spread, random) =>
-  Array.from({ length: count }, () => {
-    const jitter = () => (random() + random() + random() - 1.5) * spread;
-    const explicitness =
-      random() < 0.2 ? clampScore(base[2] + (random() < 0.5 ? -2 : 2)) : base[2];
-
-    return {
-      spice:
-        count >= 100 && random() < 0.03
-          ? null
-          : [clampScore(base[0] + jitter()), clampScore(base[1] + jitter()), explicitness],
-      cleanliness:
-        count >= 100 && random() < 0.06
-          ? null
-          : base.slice(3).map((score) => clampScore(score + jitter())),
-    };
-  });
-
-const random = seededRandom(7);
-const surveyResults = {
-  wok: createSurveySamples(412, [0, 0, 0, 1, 1, 3, 2, 2, 2], 1, random),
-  hc: createSurveySamples(284, [3, 3, 4, 2, 2, 3, 2, 3, 3], 1.4, random),
-  sl: createSurveySamples(6, [1, 1, 2, 0, 1, 1, 0, 1, 1], 1, random),
-  rp: createSurveySamples(97, [2, 2, 2, 1, 1, 0, 0, 1, 1], 1, random),
-  gi: createSurveySamples(38, [2, 2, 2, 2, 2, 2, 1, 2, 2], 2.6, random),
-  wb: createSurveySamples(150, [0, 0, 0, 0, 0, 0, 0, 0, 0], 0.6, random),
-};
+const surveyResults = {};
 
 const sum = (values) => values.reduce((total, value) => total + value, 0);
 const average = (values) =>
