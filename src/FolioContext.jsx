@@ -9,7 +9,7 @@ import { seedDemoRatings } from './ratingData.js';
 seedDemoRatings(demoRatingSeeds);
 
 const STORAGE_KEY = 'folio.guest.v1';
-const defaultProfile = { name: '', handle: '', bio: '', avatarColor: '#B7A1C9' };
+const defaultProfile = { name: '', handle: '', bio: '', avatarColor: '#B7A1C9', role: 'reader' };
 
 function readSavedWorkspace() {
   try {
@@ -92,6 +92,8 @@ export function FolioProvider({ children }) {
   const [surveyBookId, setSurveyBookId] = useState('');
   const [surveyStep, setSurveyStep] = useState(0);
   const [surveyAnswers, setSurveyAnswers] = useState({});
+  const [userPosts, setUserPosts] = useState(savedWorkspace.userPosts || []);
+  const [profileView, setProfileView] = useState(null);
 
   const notify = useCallback((message) => setToast(message), []);
   const shelvedCount = Object.values(bookshelf).filter((book) => book.shelved).length;
@@ -117,15 +119,17 @@ export function FolioProvider({ children }) {
           proReader,
           shelfTheme,
           customShelves,
+          userPosts,
         }),
       );
     } catch (error) {
       console.error('Could not save the local Folio profile.', error);
       window.dispatchEvent(new Event('folio-storage-error'));
     }
-  }, [profile, books, bookshelf, coverDesigns, savedIds, proReader, shelfTheme, customShelves]);
+  }, [profile, books, bookshelf, coverDesigns, savedIds, proReader, shelfTheme, customShelves, userPosts]);
 
   const navigate = useCallback((tab) => {
+    if (tab === 'profile') setProfileView(null);
     if (tab === 'discover') {
       setDiscoveryStarted(false);
       setDiscoveryError('');
@@ -503,6 +507,34 @@ export function FolioProvider({ children }) {
     [notify, surveyBookId],
   );
 
+  const publishPost = useCallback(
+    ({ text, bookIds, mode = 'free', format = 'text', kind = 'discussion' }) => {
+      if (!text.trim() || !bookIds.length) {
+        notify('Add a post and select at least one book.');
+        return false;
+      }
+      setUserPosts((current) => [{
+        id: globalThis.crypto.randomUUID(),
+        bookIds,
+        bookId: bookIds[0],
+        author: profile.name.trim() || 'Guest reader',
+        handle: profile.handle ? `@${profile.handle.replace(/^@+/, '')}` : '@guest',
+        avatarColor: profile.avatarColor,
+        text: text.trim(),
+        mode,
+        format,
+        kind,
+        likes: 0,
+        comments: 0,
+      }, ...current]);
+      setScreen('clubs');
+      setSpoilerTab(mode);
+      notify('Posted to the Book Clubs.');
+      return true;
+    },
+    [notify, profile.avatarColor, profile.handle, profile.name],
+  );
+
   const startReconnect = useCallback(() => {
     const candidate = Object.entries(bookshelf).find(([, item]) =>
       ['reading', 'paused'].includes(item.status),
@@ -513,6 +545,11 @@ export function FolioProvider({ children }) {
 
   const showReconnectFeed = useCallback(() => setScreen('reconnect-feed'), []);
   const showReconnectContent = useCallback(() => setScreen('reconnect-content'), []);
+
+  const openProfile = useCallback((person = null) => {
+    setProfileView(person);
+    setScreen('profile');
+  }, []);
 
   const pauseReadingBook = useCallback(() => {
     if (!readingBookId || !bookshelf[readingBookId]) {
@@ -561,6 +598,8 @@ export function FolioProvider({ children }) {
     surveyBookId,
     surveyStep,
     surveyAnswers,
+    userPosts,
+    profileView,
   };
 
   const actions = {
@@ -588,6 +627,7 @@ export function FolioProvider({ children }) {
     updateProfile,
     beginSurvey,
     submitSurvey,
+    publishPost,
     startReconnect,
     showReconnectFeed,
     showReconnectContent,
@@ -605,6 +645,7 @@ export function FolioProvider({ children }) {
     setReadingGoal,
     setSurveyStep,
     setSurveyAnswers,
+    openProfile,
     notify,
   };
 

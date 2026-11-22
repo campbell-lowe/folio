@@ -14,12 +14,30 @@ import { demoPosts } from '../demoData.js';
 function SocialPost({ post, book }) {
   const { state, actions } = useFolio();
   const [liked, setLiked] = useState(false);
-  if (!book) return null;
+  const postBookIds = post.bookIds?.length ? post.bookIds : (post.bookId ? [post.bookId] : []);
+  const mentionedBooks = postBookIds
+    .map((bookId) => state.books.find((item) => item.id === bookId))
+    .filter(Boolean);
+  if (!mentionedBooks.length) return null;
+  const primaryBook = mentionedBooks[0];
 
   return (
     <article className="social-post">
       <div className="social-post-header">
-        <Avatar color={post.avatarColor} />
+        <button
+          type="button"
+          className="social-profile-button"
+          aria-label={`View ${post.author}'s profile`}
+          onClick={() => actions.openProfile({
+            name: post.author,
+            handle: post.handle,
+            bio: 'Reader on Folio',
+            avatarColor: post.avatarColor,
+            role: 'reader',
+          })}
+        >
+          <Avatar color={post.avatarColor} />
+        </button>
         <div>
           <b>{post.author}</b>
           <span className="muted">{post.handle} · sample reader</span>
@@ -32,7 +50,7 @@ function SocialPost({ post, book }) {
           className="feed-video"
           aria-label={`Play ${post.author}'s book video`}
           onClick={() => actions.notify('Video playback is simulated in this prototype.')}
-          style={{ '--cover-from': book.from, '--cover-to': book.to }}
+          style={{ '--cover-from': primaryBook.from, '--cover-to': primaryBook.to }}
         >
           <BookCover book={book} size="lg" design={state.coverDesigns[book.id]} />
           <span className="feed-video-label">
@@ -44,18 +62,21 @@ function SocialPost({ post, book }) {
       )}
 
       <p>{post.text}</p>
-      <button
-        type="button"
-        className="social-post-book"
-        onClick={() => actions.openBook(book.id, post.mode === 'spoilers' ? 'spoilers' : 'free')}
-      >
-        <BookCover book={book} size="xs" design={state.coverDesigns[book.id]} />
-        <span>
-          <b>{book.title}</b>
-          <span className="muted">{book.author}</span>
-        </span>
-        <span className="social-post-book-action">Club ›</span>
-      </button>
+      {mentionedBooks.map((mentionedBook) => (
+        <button
+          type="button"
+          className="social-post-book"
+          key={mentionedBook.id}
+          onClick={() => actions.openBook(mentionedBook.id, post.mode === 'spoilers' ? 'spoilers' : 'free')}
+        >
+          <BookCover book={mentionedBook} size="xs" design={state.coverDesigns[mentionedBook.id]} />
+          <span>
+            <b>{mentionedBook.title}</b>
+            <span className="muted">{mentionedBook.author}</span>
+          </span>
+          <span className="social-post-book-action">Club ›</span>
+        </button>
+      ))}
       <div className="social-post-actions">
         <Button
           variant="link"
@@ -66,7 +87,7 @@ function SocialPost({ post, book }) {
         </Button>
         <Button
           variant="link"
-          onClick={() => actions.openBook(book.id, post.mode === 'spoilers' ? 'spoilers' : 'free')}
+          onClick={() => actions.openBook(primaryBook.id, post.mode === 'spoilers' ? 'spoilers' : 'free')}
         >
           ◯ {post.comments}
         </Button>
@@ -82,9 +103,10 @@ export function HomeScreen() {
   const finishedCount = state.books.filter(
     (book) => state.bookshelf[book.id]?.status === 'finished',
   ).length;
-  const posts = demoPosts
-    .filter((post) => post.mode === feedMode)
-    .slice(0, 4);
+  const posts = [
+    ...state.userPosts.filter((post) => post.mode === feedMode),
+    ...demoPosts.filter((post) => post.mode === feedMode),
+  ].slice(0, 8);
 
   return (
     <>

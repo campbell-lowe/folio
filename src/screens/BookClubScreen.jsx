@@ -1,9 +1,9 @@
+import { useState } from 'react';
 import { statusLabels } from '../data.js';
 import { useFolio } from '../useFolio.js';
 import { BookCover } from '../components/BookCover.jsx';
 import { BookSearch } from '../components/BookSearch.jsx';
 import {
-  BookRow,
   Button,
   EmptyState,
   PageTitle,
@@ -16,10 +16,16 @@ import { demoPosts } from '../demoData.js';
 import { Avatar } from '../components/BookCover.jsx';
 
 function ClubPosts({ book, spoilers }) {
-  const { actions } = useFolio();
-  const matchingPosts = demoPosts.filter((post) =>
-    post.bookId === book.id && post.mode === (spoilers ? 'spoilers' : 'free'),
-  );
+  const { state, actions } = useFolio();
+  const matchingPosts = [
+    ...state.userPosts.filter((post) =>
+      (post.bookIds?.includes(book.id) || post.bookId === book.id)
+      && post.mode === (spoilers ? 'spoilers' : 'free'),
+    ),
+    ...demoPosts.filter((post) =>
+      post.bookId === book.id && post.mode === (spoilers ? 'spoilers' : 'free'),
+    ),
+  ];
   const hash = [...book.id].reduce(
     (total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0,
     0,
@@ -69,7 +75,20 @@ function ClubPosts({ book, spoilers }) {
       {posts.map((post) => (
         <article className="social-post club-post" key={post.id}>
           <div className="social-post-header">
-            <Avatar color={post.avatarColor} />
+            <button
+              type="button"
+              className="social-profile-button"
+              aria-label={`View ${post.author}'s profile`}
+              onClick={() => actions.openProfile({
+                name: post.author,
+                handle: post.handle,
+                bio: 'Reader on Folio',
+                avatarColor: post.avatarColor,
+                role: 'reader',
+              })}
+            >
+              <Avatar color={post.avatarColor} />
+            </button>
             <div>
               <b>{post.author}</b>
               <span className="muted">{post.handle} · sample reader</span>
@@ -92,28 +111,105 @@ function ClubPosts({ book, spoilers }) {
 
 function ClubsList() {
   const { state, actions } = useFolio();
-  const listedBooks = state.books.filter((book) => state.bookshelf[book.id]?.shelved);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('title');
+  const listedBooks = state.books
+    .filter((book) => state.bookshelf[book.id])
+    .filter((book) => {
+      const entry = state.bookshelf[book.id];
+      const searchText = `${book.title} ${book.author}`.toLowerCase();
+      if (search && !searchText.includes(search.trim().toLowerCase())) return false;
+      if (statusFilter === 'off-shelf') return !entry.shelved;
+      if (statusFilter === 'all') return true;
+      return entry.status === statusFilter;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'author') return a.author.localeCompare(b.author);
+      if (sortBy === 'status') {
+        const aStatus = statusLabels[state.bookshelf[a.id].status];
+        const bStatus = statusLabels[state.bookshelf[b.id].status];
+        return aStatus.localeCompare(bStatus);
+      }
+      return a.title.localeCompare(b.title);
+    });
 
   return (
     <>
       <TopBar><div className="wordmark">Book Clubs</div></TopBar>
-      <Subtitle>A separate spoiler-safe and spoiler reading space for every book on your shelf.</Subtitle>
+      <PageTitle>Your reading circles</PageTitle>
+      <Subtitle>Talk with readers in spoiler-free or spoiler spaces.</Subtitle>
+      <div className="club-toolbar">
+        <label className="club-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search your clubs"
+            aria-label="Search book clubs"
+          />
+        </label>
+        <div className="club-filter-row">
+          <SegmentedControl
+            className="club-filters"
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'reading', label: 'Reading' },
+              { value: 'want', label: 'Want to read' },
+              { value: 'finished', label: 'Finished' },
+              { value: 'paused', label: 'Paused' },
+              { value: 'off-shelf', label: 'Off shelf' },
+            ]}
+            value={statusFilter}
+            onChange={setStatusFilter}
+          />
+          <label className="club-sort">
+            <span>Sort</span>
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <option value="title">Title</option>
+              <option value="author">Author</option>
+              <option value="status">Status</option>
+            </select>
+          </label>
+        </div>
+        <p className="club-results muted">
+          {listedBooks.length} {listedBooks.length === 1 ? 'club' : 'clubs'}
+        </p>
+      </div>
       {listedBooks.length ? (
-        listedBooks.map((book) => (
-          <BookRow
-            key={book.id}
-            book={book}
-            cover={<BookCover book={book} size="sm" design={state.coverDesigns[book.id]} />}
-            onOpen={() => actions.openBook(book.id)}
-          >
-            <span className="muted">{statusLabels[state.bookshelf[book.id].status]}</span>
-            <Button variant="small" onClick={() => actions.openBook(book.id)}>Open club</Button>
-          </BookRow>
-        ))
+        <div className="club-book-list">
+          {listedBooks.map((book) => {
+            const entry = state.bookshelf[book.id];
+            return (
+              <button
+                type="button"
+                className="club-book-row"
+                key={book.id}
+                onClick={() => actions.openBook(book.id)}
+              >
+                <BookCover book={book} size="sm" design={state.coverDesigns[book.id]} />
+                <span className="club-book-copy">
+                  <b className="serif">{book.title}</b>
+                  <span>{book.author}</span>
+                  <span className="club-status">
+                    {statusLabels[entry.status]}
+                    {!entry.shelved && ' · Off shelf'}
+                  </span>
+                </span>
+                <span className="club-open" aria-hidden="true">›</span>
+              </button>
+            );
+          })}
+        </div>
       ) : (
-        <EmptyState title="No books or clubs yet">
-          Search Open Library or import a CSV to add books to your library.
-          <Button onClick={() => actions.navigate('find')}>Find books to add</Button>
+        <EmptyState title={search || statusFilter !== 'all' ? 'No matching clubs' : 'No books or clubs yet'}>
+          {search || statusFilter !== 'all'
+            ? 'Try a different search or filter.'
+            : 'Search Open Library or import a CSV to add books to your library.'}
+          {!search && statusFilter === 'all' && (
+            <Button onClick={() => actions.navigate('find')}>Find books to add</Button>
+          )}
         </EmptyState>
       )}
     </>
@@ -200,24 +296,142 @@ export function BookClubScreen() {
 }
 
 export function CreateScreen() {
-  const { actions } = useFolio();
+  const { state, actions } = useFolio();
+  const role = state.profile.role || 'reader';
+  const [text, setText] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [mode, setMode] = useState('free');
+  const [format, setFormat] = useState('text');
+  const [kind, setKind] = useState('discussion');
+  const [search, setSearch] = useState('');
+
+  const query = search.trim().toLocaleLowerCase();
+  const availableBooks = state.books
+    .filter((book) => !query || `${book.title} ${book.author}`.toLocaleLowerCase().includes(query))
+    .slice(0, 12);
+
+  function toggleBook(bookId) {
+    setSelectedIds((current) =>
+      current.includes(bookId)
+        ? current.filter((id) => id !== bookId)
+        : [...current, bookId],
+    );
+  }
+
+  function publish() {
+    if (!text.trim()) {
+      actions.notify('Write something before posting.');
+      return;
+    }
+    if (!selectedIds.length) {
+      actions.notify('Select at least one book for this post.');
+      return;
+    }
+    actions.publishPost({
+      text,
+      bookIds: selectedIds,
+      mode,
+      format: role === 'creator' ? format : 'text',
+      kind: role === 'author' ? kind : 'discussion',
+    });
+  }
+
   return (
     <>
       <TopBar><div className="wordmark">Create</div></TopBar>
-      <PageTitle>Share your reading life</PageTitle>
+      <PageTitle>{role === 'reader' ? 'Start a conversation' : role === 'creator' ? 'Share with readers' : 'Share from the author’s desk'}</PageTitle>
       <Subtitle>
-        Reader profiles are local for now. Creator publishing will be available when Folio supports accounts.
+        {role === 'reader'
+          ? 'Text posts are shared in the spoiler-free or spoiler Book Clubs you tag.'
+          : role === 'creator'
+            ? 'Post text or a video and tag every book mentioned.'
+            : 'Share discussion or promotional material and tag the related book.'}
       </Subtitle>
-      <section className="card card-content">
-        <h2>Build your profile first</h2>
-        <p className="muted">
-          Add your name, reader handle, and favorite books. You do not need to create an account or sign in.
-        </p>
+      {role !== 'reader' && (
+        <SegmentedControl
+          className="post-format-options"
+          options={role === 'creator'
+            ? [
+                { value: 'text', label: 'Text' },
+                { value: 'video', label: 'Video' },
+              ]
+            : [
+                { value: 'discussion', label: 'Discussion' },
+                { value: 'promotion', label: 'Promotional' },
+              ]}
+          value={role === 'creator' ? format : kind}
+          onChange={role === 'creator' ? setFormat : setKind}
+        />
+      )}
+      {role === 'author' && kind === 'promotion' && (
+        <section className="author-release-note">
+          <b>Promotional post</b>
+          <span className="muted">Released books must be tagged. Upcoming books can be added here.</span>
+        </section>
+      )}
+      <section className="post-composer">
+        <label>
+          <span>{role === 'author' && kind === 'promotion' ? 'Promotional text' : 'Post text'}</span>
+          <textarea
+            className="text-input"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            rows={5}
+            maxLength={1000}
+            placeholder={role === 'author' ? 'Share your update or promotion…' : 'What are you thinking about?'}
+          />
+          <span className="muted post-character-count">{text.length}/1000</span>
+        </label>
+        {role === 'creator' && format === 'video' && (
+          <div className="post-video-placeholder">
+            <span aria-hidden="true">▶</span>
+            <b>Video attachment</b>
+            <span className="muted">Video uploading is available in the full app.</span>
+          </div>
+        )}
+        <fieldset className="post-spoiler-options">
+          <legend>Discussion type</legend>
+          <SegmentedControl
+            options={[
+              { value: 'free', label: 'No spoilers' },
+              { value: 'spoilers', label: 'Contains spoilers' },
+            ]}
+            value={mode}
+            onChange={setMode}
+          />
+        </fieldset>
+        <fieldset className="post-book-picker">
+          <legend>Mentioned books</legend>
+          <input
+            className="text-input"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search title or author"
+            aria-label="Search mentioned books"
+          />
+          <div className="post-book-options">
+            {availableBooks.map((book) => (
+              <label key={book.id} className={selectedIds.includes(book.id) ? 'selected' : ''}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(book.id)}
+                  onChange={() => toggleBook(book.id)}
+                />
+                <BookCover book={book} size="xs" design={state.coverDesigns[book.id]} />
+                <span>
+                  <b>{book.title}</b>
+                  <span className="muted">{book.author}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <Button variant="link" onClick={() => actions.navigate('find')}>＋ Add or find a book</Button>
+        </fieldset>
+        <div className="page-actions">
+          <Button onClick={publish}>Post to Book Clubs</Button>
+          <Button variant="outline" onClick={() => actions.navigate('clubs')}>Cancel</Button>
+        </div>
       </section>
-      <div className="page-actions">
-        <Button onClick={() => actions.navigate('profile')}>Open my profile</Button>
-        <Button variant="outline" onClick={() => actions.navigate('clubs')}>Visit Book Clubs</Button>
-      </div>
     </>
   );
 }
