@@ -38,10 +38,21 @@ function SocialPost({ post, book }) {
         >
           <Avatar color={post.avatarColor} />
         </button>
-        <div>
+        <button
+          type="button"
+          className="social-profile-details"
+          aria-label={`View ${post.author}'s profile`}
+          onClick={() => actions.openProfile({
+            name: post.author,
+            handle: post.handle,
+            bio: 'Reader on Folio',
+            avatarColor: post.avatarColor,
+            role: 'reader',
+          })}
+        >
           <b>{post.author}</b>
           <span className="muted">{post.handle} · sample reader</span>
-        </div>
+        </button>
       </div>
 
       {post.video && (

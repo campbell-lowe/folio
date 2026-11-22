@@ -367,6 +367,25 @@ h3 {
   background: transparent;
 }
 
+.social-profile-details {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.social-profile-details:hover b,
+.social-profile-details:focus-visible b {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .avatar-picker {
   margin: 0 20px 8px;
   padding: 0;
@@ -734,8 +753,8 @@ h3 {
 }
 
 .book-cover.xs {
-  width: 46px;
-  font-size: 7px;
+  width: 28px;
+  font-size: 5px;
 }
 
 .book-cover.sm {
@@ -1049,20 +1068,41 @@ button.tag {
 
 .social-post-book {
   display: flex;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 6px 4px 4px;
   border: 1px solid rgb(118 87 73 / 14%);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--bg);
   text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.social-post-book:hover {
+  border-color: rgb(118 87 73 / 30%);
+  transform: none;
 }
 
 .social-post-book > span {
   display: flex;
   min-width: 0;
   flex-direction: column;
+}
+
+.social-post-book > span:not(.social-post-book-action) b {
+  max-width: 180px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-post-book > span:not(.social-post-book-action) .muted {
+  display: none;
 }
 
 .social-post-book-action {

@@ -89,12 +89,55 @@ function ClubPosts({ book, spoilers }) {
             >
               <Avatar color={post.avatarColor} />
             </button>
-            <div>
+            <button
+              type="button"
+              className="social-profile-details"
+              aria-label={`View ${post.author}'s profile`}
+              onClick={() => actions.openProfile({
+                name: post.author,
+                handle: post.handle,
+                bio: 'Reader on Folio',
+                avatarColor: post.avatarColor,
+                role: 'reader',
+              })}
+            >
               <b>{post.author}</b>
               <span className="muted">{post.handle} · sample reader</span>
-            </div>
+            </button>
           </div>
           <p>{post.text}</p>
+          {(post.bookIds?.length
+            ? post.bookIds
+            : [post.bookId || book.id]
+          ).map((bookId) => state.books.find((item) => item.id === bookId) || (
+            bookId === book.id ? book : null
+          ))
+            .filter((mentionedBook, index, mentionedBooks) =>
+              mentionedBook
+              && mentionedBooks.findIndex((item) => item?.id === mentionedBook.id) === index,
+            )
+            .map((mentionedBook) => (
+            <button
+              type="button"
+              className="social-post-book"
+              key={mentionedBook.id}
+              onClick={() => actions.openBook(
+                mentionedBook.id,
+                spoilers ? 'spoilers' : 'free',
+              )}
+            >
+              <BookCover
+                book={mentionedBook}
+                size="xs"
+                design={state.coverDesigns[mentionedBook.id]}
+              />
+              <span>
+                <b>{mentionedBook.title}</b>
+                <span className="muted">{mentionedBook.author}</span>
+              </span>
+              <span className="social-post-book-action">View ›</span>
+            </button>
+          ))}
           <div className="social-post-actions">
             <Button variant="link" onClick={() => actions.notify('Like saved in this prototype.')}>
               ♡ {post.likes}

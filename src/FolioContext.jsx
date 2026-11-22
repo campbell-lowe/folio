@@ -164,7 +164,10 @@ export function FolioProvider({ children }) {
     [addToCatalog, books, notify, screen],
   );
 
-  const back = useCallback(() => setScreen(previousScreen), [previousScreen]);
+  const back = useCallback(() => {
+    setProfileView(null);
+    setScreen(previousScreen);
+  }, [previousScreen]);
 
   const openRatings = useCallback(
     (bookOrId) => {
@@ -547,9 +550,10 @@ export function FolioProvider({ children }) {
   const showReconnectContent = useCallback(() => setScreen('reconnect-content'), []);
 
   const openProfile = useCallback((person = null) => {
+    setPreviousScreen(screen);
     setProfileView(person);
     setScreen('profile');
-  }, []);
+  }, [screen]);
 
   const pauseReadingBook = useCallback(() => {
     if (!readingBookId || !bookshelf[readingBookId]) {
