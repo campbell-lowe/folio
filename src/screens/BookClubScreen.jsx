@@ -12,15 +12,92 @@ import {
   TopBar,
 } from '../components/Shared.jsx';
 import { ContentRatingCard } from './RatingsScreen.jsx';
+import { demoPosts } from '../demoData.js';
+import { Avatar } from '../components/BookCover.jsx';
+
+function ClubPosts({ book, spoilers }) {
+  const { actions } = useFolio();
+  const matchingPosts = demoPosts.filter((post) =>
+    post.bookId === book.id && post.mode === (spoilers ? 'spoilers' : 'free'),
+  );
+  const hash = [...book.id].reduce(
+    (total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0,
+    0,
+  );
+  const readers = [
+    ['Nora P.', '@norapages', '#D9A6AD'],
+    ['Sam Rivera', '@samreadsafterdark', '#A8B9A0'],
+    ['Jules Tan', '@dogeared', '#8FB3C9'],
+  ];
+  const generatedPosts = readers.map(([author, handle, avatarColor], index) => {
+    const freeText = [
+      `I’m loving the atmosphere of ${book.title} so far. The opening already has me curious.`,
+      `The writing in ${book.title} feels perfect for a slow read. Anyone else noticing the small details?`,
+      `Just reached a quiet but memorable chapter in ${book.title}. No plot reveals—still enjoying the setup.`,
+    ][index];
+    const spoilerText = [
+      `That ending to ${book.title} changed how I read the earlier chapters. I keep catching new clues.`,
+      `I had to sit with ${book.title} for a while after the last chapter. What did everyone think of that final reveal?`,
+      `The biggest surprise in ${book.title} worked for me because the character motives felt earned.`,
+    ][index];
+    return {
+      id: `generated-${book.id}-${spoilers ? 'spoiler' : 'free'}-${index}`,
+      author,
+      handle,
+      avatarColor,
+      text: spoilers ? spoilerText : freeText,
+      likes: 18 + ((hash + index * 11) % 73),
+      comments: 3 + ((hash + index * 7) % 17),
+    };
+  });
+  const posts = matchingPosts.length
+    ? [...matchingPosts, ...generatedPosts.slice(0, 1)]
+    : generatedPosts;
+  return (
+    <div className="club-post-list">
+      <div className="club-post-compose">
+        <span className="muted">
+          {posts.length + 84} readers · simulated club
+        </span>
+        <Button
+          variant="small-outline"
+          onClick={() => actions.notify('Posting is simulated in this prototype.')}
+        >
+          Share a thought
+        </Button>
+      </div>
+      {posts.map((post) => (
+        <article className="social-post club-post" key={post.id}>
+          <div className="social-post-header">
+            <Avatar color={post.avatarColor} />
+            <div>
+              <b>{post.author}</b>
+              <span className="muted">{post.handle} · sample reader</span>
+            </div>
+          </div>
+          <p>{post.text}</p>
+          <div className="social-post-actions">
+            <Button variant="link" onClick={() => actions.notify('Like saved in this prototype.')}>
+              ♡ {post.likes}
+            </Button>
+            <Button variant="link" onClick={() => actions.notify('Comments are simulated in this prototype.')}>
+              ◯ {post.comments}
+            </Button>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
 
 function ClubsList() {
   const { state, actions } = useFolio();
-  const listedBooks = state.books.filter((book) => state.bookshelf[book.id]);
+  const listedBooks = state.books.filter((book) => state.bookshelf[book.id]?.shelved);
 
   return (
     <>
       <TopBar><div className="wordmark">Book Clubs</div></TopBar>
-      <Subtitle>A separate reading space for every book on your list.</Subtitle>
+      <Subtitle>A separate spoiler-safe and spoiler reading space for every book on your shelf.</Subtitle>
       {listedBooks.length ? (
         listedBooks.map((book) => (
           <BookRow
@@ -111,9 +188,7 @@ function BookDetail() {
       {spoilers && !entry ? (
         <LockedSpoilers book={book} />
       ) : (
-        <EmptyState title="No discussions yet">
-          Book Club discussions will appear here when there are reader posts.
-        </EmptyState>
+        <ClubPosts book={book} spoilers={spoilers} />
       )}
     </>
   );

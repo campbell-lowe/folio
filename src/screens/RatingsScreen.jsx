@@ -94,7 +94,7 @@ export function ContentRatingChip({ bookId, book }) {
   const ratings = getContentRatings(bookId);
   const rated = ratings.spiceCount || ratings.cleanCount;
   const label = rated
-    ? `Spice ${scoreLabel(ratings.spice)} of 5 from ${ratings.spiceCount} surveys. Cleanliness ${scoreLabel(ratings.cleanliness)} of 5 from ${ratings.cleanCount} surveys. Open details`
+    ? `Spice ${scoreLabel(ratings.spice)} of 5 ${ratings.isPlaceholder ? 'from sample ratings' : `from ${ratings.spiceCount} surveys`}. Cleanliness ${scoreLabel(ratings.cleanliness)} of 5 ${ratings.isPlaceholder ? 'from sample ratings' : `from ${ratings.cleanCount} surveys`}. Open details`
     : 'Not rated yet. Open content ratings';
 
   return (
@@ -142,7 +142,11 @@ export function ContentRatingCard({ bookId }) {
             </div>
           </div>
           <span className="muted">
-            {count ? `Based on ${count} reader survey${count === 1 ? '' : 's'}` : 'No surveys yet'}
+            {ratings.isPlaceholder
+              ? `Sample rating from ${count} example surveys`
+              : count
+                ? `Based on ${count} reader survey${count === 1 ? '' : 's'}`
+                : 'No surveys yet'}
           </span>
         </div>
       ))}

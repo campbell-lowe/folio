@@ -1,5 +1,5 @@
 const OPEN_LIBRARY = 'https://openlibrary.org';
-const SEARCH_FIELDS = 'key,title,author_name,cover_i,isbn,first_publish_year,subject';
+const SEARCH_FIELDS = 'key,title,author_name,cover_i,isbn,first_publish_year,subject,first_sentence';
 const coverColors = [
   ['#35557c', '#101c33'],
   ['#8a2f4f', '#33121f'],
@@ -33,6 +33,9 @@ function toBook(document) {
       : null,
     year: document.first_publish_year || null,
     subjects: Array.isArray(document.subject) ? document.subject.slice(0, 5) : [],
+    description: Array.isArray(document.first_sentence)
+      ? document.first_sentence[0] || ''
+      : (typeof document.first_sentence === 'string' ? document.first_sentence : ''),
     from: colors[0],
     to: colors[1],
     motif: stableNumber(id) % 3,

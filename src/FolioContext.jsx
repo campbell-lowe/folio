@@ -3,6 +3,10 @@ import { rainbowPalette } from './data.js';
 import { addSurvey } from './ratingData.js';
 import { searchBooks } from './openLibrary.js';
 import { FolioContext } from './folioContext.js';
+import { demoRatingSeeds, demoWorkspace } from './demoData.js';
+import { seedDemoRatings } from './ratingData.js';
+
+seedDemoRatings(demoRatingSeeds);
 
 const STORAGE_KEY = 'folio.guest.v1';
 const defaultProfile = { name: '', handle: '', bio: '', avatarColor: '#B7A1C9' };
@@ -10,9 +14,44 @@ const defaultProfile = { name: '', handle: '', bio: '', avatarColor: '#B7A1C9' }
 function readSavedWorkspace() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return {};
+    if (!saved) return demoWorkspace;
     const data = JSON.parse(saved);
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return demoWorkspace;
+
+    const profileIsEmpty = !data.profile
+      || (!data.profile.name && !data.profile.handle && !data.profile.bio);
+    const existingBooks = Array.isArray(data.books) ? data.books : [];
+
+    return {
+      ...demoWorkspace,
+      ...data,
+      profile: profileIsEmpty
+        ? demoWorkspace.profile
+        : { ...defaultProfile, ...data.profile },
+      books: existingBooks.length
+        ? [
+            ...existingBooks,
+            ...demoWorkspace.books.filter((book) =>
+              !existingBooks.some((existing) => existing.id === book.id),
+            ),
+          ]
+        : demoWorkspace.books,
+      bookshelf: Object.keys(data.bookshelf || {}).length
+        ? {
+            ...demoWorkspace.bookshelf,
+            ...data.bookshelf,
+          }
+        : demoWorkspace.bookshelf,
+      savedIds: Array.isArray(data.savedIds) && data.savedIds.length
+        ? data.savedIds
+        : demoWorkspace.savedIds,
+      customShelves: Array.isArray(data.customShelves) && data.customShelves.length
+        ? data.customShelves
+        : demoWorkspace.customShelves,
+      coverDesigns: data.coverDesigns && typeof data.coverDesigns === 'object'
+        ? data.coverDesigns
+        : demoWorkspace.coverDesigns,
+    };
   } catch (error) {
     console.error('Could not load the local Folio profile.', error);
     return {};

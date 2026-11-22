@@ -10,6 +10,7 @@ import {
   TopBar,
 } from '../components/Shared.jsx';
 import { ContentRatingChip } from './RatingsScreen.jsx';
+import { getContentRatings } from '../ratingData.js';
 
 function DiscoverSetup() {
   const { state, actions } = useFolio();
@@ -27,8 +28,9 @@ function DiscoverSetup() {
       <div className="card card-content">
         <b>How it works</b>
         <p className="muted">
-          Spoiler-free clips only. No autoplay, no endless feed, and nothing extra once you’re done.
-        </p>
+            Read a spoiler-free book description and compare its leaf and pepper ratings.
+            No endless feed and nothing extra once you reach your goal.
+          </p>
       </div>
       <div className="page-actions">
         <Button onClick={actions.startDiscovery} disabled={state.discoveryLoading}>
@@ -44,6 +46,10 @@ function DiscoverySession() {
   const { state, actions } = useFolio();
   const book = state.currentDiscoveryBook;
   if (!book) return <DiscoveryResults />;
+  const ratings = getContentRatings(book.id);
+  const scale = (value) => value == null
+    ? 'No ratings'
+    : `${Math.round(value)} / 5`;
 
   return (
     <>
@@ -57,26 +63,40 @@ function DiscoverySession() {
         ))}
       </div>
       <article className="card discover-card">
-        <div
-          className="video-preview discover-preview"
-          style={{ '--cover-from': book.from, '--cover-to': book.to }}
-        >
-          <BookCover book={book} size="lg" />
-          <span className="video-duration">Spoiler-free · tap to play</span>
-          <button
-            type="button"
-            className="play-button"
-            aria-label="Play video"
-            onClick={() => actions.notify('Playback is simulated in this prototype.')}
-          >
-            ▶
-          </button>
-        </div>
         <div className="card-content">
-          <h2>{book.title}</h2>
-          <span className="muted">{book.author}</span>
-          {book.year && <p>First published {book.year}</p>}
+          <div className="discover-book-heading">
+            <BookCover book={book} size="sm" />
+            <div>
+              <span className="discover-label">About this book</span>
+              <h2>{book.title}</h2>
+              <span className="muted">{book.author}</span>
+            </div>
+          </div>
+          {book.description ? (
+            <p className="discover-description">{book.description}</p>
+          ) : (
+            <p className="discover-description muted">
+              {book.subjects?.length
+                ? `Explore ${book.subjects.slice(0, 3).join(', ').toLowerCase()} in this ${book.year ? `${book.year} ` : ''}title by ${book.author}.`
+                : `Read ${book.title}, a book by ${book.author}${book.year ? ` first published in ${book.year}` : ''}.`}
+            </p>
+          )}
+          {book.year && <p className="muted">First published {book.year}</p>}
+          <div className="discover-content-ratings">
+            <h3>Community content</h3>
+            <div className="discover-scale-row">
+              <span>🌶️ Pepper</span>
+              <strong>{scale(ratings.spice)}</strong>
+            </div>
+            <div className="discover-scale-row">
+              <span>🍃 Leaf</span>
+              <strong>{scale(ratings.cleanliness)}</strong>
+            </div>
+          </div>
           <ContentRatingChip bookId={book.id} book={book} />
+          {ratings.isPlaceholder && (
+            <p className="muted small-text">Sample community ratings shown until readers add surveys.</p>
+          )}
         </div>
       </article>
       <div className="page-actions">

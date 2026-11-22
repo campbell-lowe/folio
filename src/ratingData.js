@@ -2,6 +2,20 @@ import { surveySections } from './data.js';
 
 const surveyResults = {};
 
+export function seedDemoRatings(ratingSeeds) {
+  Object.entries(ratingSeeds).forEach(([bookId, seed]) => {
+    if (surveyResults[bookId]) return;
+    surveyResults[bookId] = Array.from({ length: seed.count }, (_, index) => {
+      const spiceShift = index % 4 === 0 ? 1 : 0;
+      const cleanShift = index % 5 === 0 ? 1 : 0;
+      return {
+        spice: seed.spice.map((value) => Math.max(0, Math.min(4, value + spiceShift))),
+        cleanliness: seed.cleanliness.map((value) => Math.max(0, Math.min(4, value + cleanShift))),
+      };
+    });
+  });
+}
+
 const sum = (values) => values.reduce((total, value) => total + value, 0);
 const average = (values) =>
   values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
@@ -20,7 +34,31 @@ export function addSurvey(bookId, survey) {
 }
 
 export function getContentRatings(bookId) {
-  const results = surveyResults[bookId] || [];
+  let results = surveyResults[bookId] || [];
+  const isPlaceholder = results.length === 0;
+  if (isPlaceholder) {
+    const hash = [...bookId].reduce(
+      (total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0,
+      0,
+    );
+    const spiceLevel = hash % 4;
+    const cleanlinessLevel = 4 - (Math.floor(hash / 4) % 5);
+    const count = 12 + (hash % 19);
+    results = Array.from({ length: count }, (_, index) => ({
+      spice: [
+        Math.max(0, Math.min(4, spiceLevel + (index % 3 === 0 ? 1 : index % 5 === 0 ? -1 : 0))),
+        Math.max(0, Math.min(4, spiceLevel + (index % 4 === 0 ? 1 : 0))),
+        index % 3 === 0 ? 2 : 1,
+      ],
+      cleanliness: Array.from({ length: 6 }, (__, position) =>
+        Math.max(0, Math.min(4, cleanlinessLevel + (
+          (index + position) % 7 === 0 ? -1
+            : (index + position) % 9 === 0 ? 1
+              : 0
+        ))),
+      ),
+    }));
+  }
   const spiceRows = results.filter((row) => row.spice);
   const cleanRows = results.filter((row) => row.cleanliness);
   const spiceScore = (row) =>
@@ -60,6 +98,7 @@ export function getContentRatings(bookId) {
   }));
 
   return {
+    isPlaceholder,
     spiceCount: spiceRows.length,
     cleanCount: cleanRows.length,
     spice: average(spiceRows.map(spiceScore)),
