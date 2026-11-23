@@ -17,6 +17,13 @@ import { Avatar } from '../components/BookCover.jsx';
 
 function ClubPosts({ book, spoilers }) {
   const { state, actions } = useFolio();
+  const [topic, setTopic] = useState('general');
+  const topics = [
+    { value: 'general', label: 'General', prompt: `What is everyone noticing in ${book.title}?` },
+    { value: 'characters', label: 'Characters', prompt: 'Which character has shaped your reading so far?' },
+    { value: 'themes', label: 'Themes', prompt: 'What ideas or patterns keep showing up?' },
+    { value: 'chapters', label: 'Chapter chat', prompt: 'Share a favorite moment or checkpoint, without rushing ahead.' },
+  ];
   const matchingPosts = [
     ...state.userPosts.filter((post) =>
       (post.bookIds?.includes(book.id) || post.bookId === book.id)
@@ -59,20 +66,43 @@ function ClubPosts({ book, spoilers }) {
   const posts = matchingPosts.length
     ? [...matchingPosts, ...generatedPosts.slice(0, 1)]
     : generatedPosts;
+  const topicPosts = topic === 'general'
+    ? posts.slice(0, 3)
+    : generatedPosts.slice(0, 1).map((post, index) => ({
+        ...post,
+        id: `${post.id}-${topic}`,
+        text: topics.find((item) => item.value === topic)?.prompt
+          || post.text,
+        likes: post.likes + index + topics.findIndex((item) => item.value === topic),
+      }));
+  const activeTopic = topics.find((item) => item.value === topic);
   return (
     <div className="club-post-list">
+      <SegmentedControl
+        className="club-topic-tabs"
+        options={topics}
+        value={topic}
+        onChange={setTopic}
+      />
+      <section className="club-topic-heading">
+        <div>
+          <span className="club-topic-kicker">{spoilers ? 'Spoiler discussion' : 'Spoiler-free discussion'}</span>
+          <h3>{activeTopic.prompt}</h3>
+        </div>
+        <span className="club-topic-count">{topic === 'general' ? '3 conversations' : '1 conversation'}</span>
+      </section>
       <div className="club-post-compose">
         <span className="muted">
-          {posts.length + 84} readers · simulated club
+          {topicPosts.length + 84} readers · simulated club
         </span>
         <Button
           variant="small-outline"
-          onClick={() => actions.notify('Posting is simulated in this prototype.')}
+          onClick={() => actions.notify(`Join the ${activeTopic.label.toLowerCase()} conversation.`)}
         >
-          Share a thought
+          Join conversation
         </Button>
       </div>
-      {posts.map((post) => (
+      {topicPosts.map((post) => (
         <article className="social-post club-post" key={post.id}>
           <div className="social-post-header">
             <button
